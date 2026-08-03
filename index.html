@@ -2,81 +2,222 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ลงเวลาเข้า-ออกงาน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg: #f2f5f9;
+    --card: #ffffff;
+    --line: #dce4ee;
+    --ink: #172231;
+    --muted: #7c8798;
+    --accent: #2b6cb0;
+    --accent-soft: #e1ebf7;
+    --green: #1f8a5f;
+    --green-soft: #e2f2ea;
+    --red: #c0433b;
+  }
+
   * { box-sizing: border-box; }
+
   body {
     font-family: 'Noto Sans Thai', 'Segoe UI', sans-serif;
-    background: #f4f6f8;
+    background: var(--bg);
     margin: 0;
-    padding: 24px 16px;
-    color: #222;
+    padding: 32px 16px 60px;
+    color: var(--ink);
+    min-height: 100vh;
   }
-  .card {
-    max-width: 400px;
+
+  .terminal {
+    max-width: 380px;
     margin: 0 auto;
-    background: #fff;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    text-align: center;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .top-line { height: 3px; background: var(--accent); }
+
+  .panel-body { padding: 24px 22px 22px; }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
   }
   .avatar {
-    width: 72px; height: 72px;
+    width: 48px; height: 48px;
     border-radius: 50%;
-    margin-bottom: 8px;
     object-fit: cover;
+    border: 1px solid var(--line);
+    flex: none;
+    display: none;
   }
-  h2 { margin: 4px 0 2px; font-size: 18px; }
-  .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
-  .clock { font-size: 32px; font-weight: 600; margin: 8px 0 4px; }
-  .date { color: #666; font-size: 14px; margin-bottom: 24px; }
-  button {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 12px;
+  .id-text { min-width: 0; }
+  .id-text h2 {
+    margin: 0;
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: 12px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .id-text .sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .display {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    text-align: center;
+    margin-bottom: 22px;
+  }
+  .clock {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .date {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+  }
+
+  .actions { display: grid; gap: 10px; margin-bottom: 4px; }
+  button {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.12s ease, opacity 0.2s ease;
   }
-  .btn-in { background: #06c755; color: #fff; }
-  .btn-out { background: #ff4d4f; color: #fff; }
-  button:disabled { opacity: 0.5; }
-  .status {
-    margin-top: 16px;
-    font-size: 14px;
-    min-height: 20px;
-    white-space: pre-line;
-    line-height: 1.5;
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  .btn-in {
+    background: var(--ink);
+    color: #fff;
   }
-  .ok { color: #06c755; }
-  .err { color: #ff4d4f; }
+  .btn-out {
+    background: transparent;
+    color: var(--red);
+    border-color: var(--line);
+  }
+
+  .receipt-wrap { margin-top: 18px; }
+  .receipt {
+    position: relative;
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .receipt .headline {
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .receipt .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid var(--line);
+    padding: 5px 0;
+  }
+  .receipt .row:first-of-type { border-top: none; padding-top: 0; }
+  .receipt .row span:first-child { color: var(--muted); }
+  .receipt.state-ok .headline { color: var(--green); }
+  .receipt.state-warn .headline { color: var(--accent); }
+  .receipt.state-err .headline { color: var(--red); }
+
+  .receipt-empty {
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: center;
+    padding: 10px 4px 2px;
+  }
 </style>
 </head>
 <body>
 
-<div class="card">
-  <img id="avatar" class="avatar" src="" style="display:none;">
-  <h2 id="name">กำลังโหลด...</h2>
-  <div class="sub" id="userid"></div>
+<div class="terminal">
+  <div class="top-line"></div>
+  <div class="panel-body">
 
-  <div class="clock" id="clock">--:--:--</div>
-  <div class="date" id="today"></div>
+    <div class="eyebrow">TIME CLOCK</div>
 
-  <button class="btn-in" id="btnIn" disabled>✅ เข้างาน (Clock In)</button>
-  <button class="btn-out" id="btnOut" disabled>🔴 ออกงาน (Clock Out)</button>
+    <div class="identity">
+      <img id="avatar" class="avatar" src="" alt="">
+      <div class="id-text">
+        <h2 id="name">กำลังโหลด...</h2>
+        <div class="sub" id="userid"></div>
+      </div>
+    </div>
 
-  <div class="status" id="status"></div>
+    <div class="display">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="date" id="today"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-in" id="btnIn" disabled>✓ เข้างาน · Clock In</button>
+      <button class="btn-out" id="btnOut" disabled>● ออกงาน · Clock Out</button>
+    </div>
+
+    <div class="receipt-wrap">
+      <div id="status" class="receipt-empty">แตะปุ่มด้านบนเพื่อลงเวลา</div>
+    </div>
+
+  </div>
 </div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // ===== ตั้งค่าตรงนี้ =====
   const LIFF_ID = "2010942141-MjvCn4Hn";
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw42KHhCiVyPiCBCs0PdtSA5V4dnyYAu-P9rp8owwlxn2-2eIDR0DJGRZyIbkGzUuXY/exec";
-  // ========================
 
   let profile = null;
 
@@ -92,10 +233,37 @@
   setInterval(updateClock, 1000);
   updateClock();
 
-  function setStatus(msg, ok) {
+  function setStatus(msg) {
     const el = document.getElementById('status');
-    el.textContent = msg;
-    el.className = 'status ' + (ok ? 'ok' : 'err');
+    const wrap = el.parentElement;
+    wrap.innerHTML = '<div id="status" class="receipt-empty">' + msg + '</div>';
+  }
+
+  function renderReceipt(action, data) {
+    const wrap = document.getElementById('status').parentElement;
+    const isOutOfArea = data.inArea === 'ไม่ใช่';
+    const state = isOutOfArea ? 'state-warn' : 'state-ok';
+    const headline = isOutOfArea
+      ? '⚠️ บันทึกแล้ว แต่อยู่นอกพื้นที่'
+      : '✓ บันทึก' + (action === 'เข้างาน' ? 'เวลาเข้างาน' : 'เวลาออกงาน') + 'สำเร็จ';
+
+    wrap.innerHTML =
+      '<div class="receipt ' + state + '">' +
+        '<div class="headline">' + headline + '</div>' +
+        '<div class="row"><span>ประเภท</span><span>' + action + '</span></div>' +
+        '<div class="row"><span>กะ</span><span>' + (data.shift || '-') + '</span></div>' +
+        '<div class="row"><span>สถานะเวลา</span><span>' + (data.statusText || '-') + '</span></div>' +
+        '<div class="row"><span>ระยะห่าง</span><span>' + (data.distanceM !== '' ? data.distanceM + ' ม.' : '-') + '</span></div>' +
+      '</div>';
+  }
+
+  function renderError(msg) {
+    const wrap = document.getElementById('status').parentElement;
+    wrap.innerHTML =
+      '<div class="receipt state-err">' +
+        '<div class="headline">✕ เกิดข้อผิดพลาด</div>' +
+        '<div class="row"><span>รายละเอียด</span><span>' + msg + '</span></div>' +
+      '</div>';
   }
 
   function getLocation() {
@@ -115,11 +283,11 @@
   async function clockAction(action) {
     document.getElementById('btnIn').disabled = true;
     document.getElementById('btnOut').disabled = true;
-    setStatus('กำลังตรวจสอบตำแหน่ง...', true);
+    setStatus('กำลังตรวจสอบตำแหน่ง...');
 
     try {
       const loc = await getLocation();
-      setStatus('กำลังบันทึกข้อมูล...', true);
+      setStatus('กำลังบันทึกข้อมูล...');
 
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -134,17 +302,12 @@
       const data = await res.json();
 
       if (data.status === 'ok') {
-        const label = action === 'เข้างาน' ? 'บันทึกเวลาเข้างานเรียบร้อย' : 'บันทึกเวลาออกงานเรียบร้อย';
-        const areaWarning = data.inArea === 'ไม่ใช่' ? ' ⚠️ อยู่นอกพื้นที่ที่กำหนด' : '';
-        const lines = '✅ ' + label + areaWarning +
-          '\n' + (data.shift || '') + ' • ' + (data.statusText || '') +
-          (data.distanceM !== '' ? ' • ห่างจากที่ทำงาน ' + data.distanceM + ' ม.' : '');
-        setStatus(lines, data.inArea !== 'ไม่ใช่');
+        renderReceipt(action, data);
       } else {
-        setStatus('เกิดข้อผิดพลาด: ' + data.message, false);
+        renderError(data.message);
       }
     } catch (e) {
-      setStatus(typeof e === 'string' ? e : 'เกิดข้อผิดพลาด กรุณาลองใหม่', false);
+      renderError(typeof e === 'string' ? e : 'กรุณาลองใหม่อีกครั้ง');
     } finally {
       document.getElementById('btnIn').disabled = false;
       document.getElementById('btnOut').disabled = false;
@@ -165,7 +328,7 @@
       if (profile.pictureUrl) {
         const avatar = document.getElementById('avatar');
         avatar.src = profile.pictureUrl;
-        avatar.style.display = 'inline-block';
+        avatar.style.display = 'block';
       }
 
       document.getElementById('btnIn').disabled = false;
@@ -175,7 +338,7 @@
       document.getElementById('btnOut').onclick = () => clockAction('ออกงาน');
 
     } catch (err) {
-      setStatus('ไม่สามารถเชื่อมต่อ LINE ได้: ' + err, false);
+      renderError('ไม่สามารถเชื่อมต่อ LINE ได้: ' + err);
     }
   }
 
