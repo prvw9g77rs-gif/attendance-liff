@@ -48,6 +48,8 @@
     margin-top: 16px;
     font-size: 14px;
     min-height: 20px;
+    white-space: pre-line;
+    line-height: 1.5;
   }
   .ok { color: #06c755; }
   .err { color: #ff4d4f; }
@@ -132,7 +134,12 @@
       const data = await res.json();
 
       if (data.status === 'ok') {
-        setStatus((action === 'เข้างาน' ? '✅ บันทึกเวลาเข้างานเรียบร้อย' : '✅ บันทึกเวลาออกงานเรียบร้อย'), true);
+        const label = action === 'เข้างาน' ? 'บันทึกเวลาเข้างานเรียบร้อย' : 'บันทึกเวลาออกงานเรียบร้อย';
+        const areaWarning = data.inArea === 'ไม่ใช่' ? ' ⚠️ อยู่นอกพื้นที่ที่กำหนด' : '';
+        const lines = '✅ ' + label + areaWarning +
+          '\n' + (data.shift || '') + ' • ' + (data.statusText || '') +
+          (data.distanceM !== '' ? ' • ห่างจากที่ทำงาน ' + data.distanceM + ' ม.' : '');
+        setStatus(lines, data.inArea !== 'ไม่ใช่');
       } else {
         setStatus('เกิดข้อผิดพลาด: ' + data.message, false);
       }
