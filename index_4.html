@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ลงเวลาเข้า-ออกงาน</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Thai', 'Segoe UI', sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 24px 16px;
+    color: #222;
+  }
+  .card {
+    max-width: 400px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    margin-bottom: 8px;
+    object-fit: cover;
+  }
+  h2 { margin: 4px 0 2px; font-size: 18px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
+  .clock { font-size: 32px; font-weight: 600; margin: 8px 0 4px; }
+  .date { color: #666; font-size: 14px; margin-bottom: 24px; }
+  button {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+  .btn-in { background: #06c755; color: #fff; }
+  .btn-out { background: #ff4d4f; color: #fff; }
+  button:disabled { opacity: 0.5; }
+  .status {
+    margin-top: 16px;
+    font-size: 14px;
+    min-height: 20px;
+  }
+  .ok { color: #06c755; }
+  .err { color: #ff4d4f; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <img id="avatar" class="avatar" src="" style="display:none;">
+  <h2 id="name">กำลังโหลด...</h2>
+  <div class="sub" id="userid"></div>
+
+  <div class="clock" id="clock">--:--:--</div>
+  <div class="date" id="today"></div>
+
+  <button class="btn-in" id="btnIn" disabled>✅ เข้างาน (Clock In)</button>
+  <button class="btn-out" id="btnOut" disabled>🔴 ออกงาน (Clock Out)</button>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+  // ===== ตั้งค่าตรงนี้ =====
+  const LIFF_ID = "2010942141-MjvCn4Hn";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw42KHhCiVyPiCBCs0PdtSA5V4dnyYAu-P9rp8owwlxn2-2eIDR0DJGRZyIbkGzUuXY/exec";
+  // ========================
+
+  let profile = null;
+
+  function pad(n) { return n < 10 ? '0' + n : n; }
+
+  function updateClock() {
+    const d = new Date();
+    document.getElementById('clock').textContent =
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    document.getElementById('today').textContent =
+      d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function setStatus(msg, ok) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + (ok ? 'ok' : 'err');
+  }
+
+  function getLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject('อุปกรณ์นี้ไม่รองรับ GPS');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        err => reject('กรุณาเปิดสิทธิ์การเข้าถึงตำแหน่ง (GPS) แล้วลองใหม่'),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  }
+
+  async function clockAction(action) {
+    document.getElementById('btnIn').disabled = true;
+    document.getElementById('btnOut').disabled = true;
+    setStatus('กำลังตรวจสอบตำแหน่ง...', true);
+
+    try {
+      const loc = await getLocation();
+      setStatus('กำลังบันทึกข้อมูล...', true);
+
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: profile.userId,
+          displayName: profile.displayName,
+          action: action,
+          lat: loc.lat,
+          lng: loc.lng
+        })
+      });
+      const data = await res.json();
+
+      if (data.status === 'ok') {
+        setStatus((action === 'เข้างาน' ? '✅ บันทึกเวลาเข้างานเรียบร้อย' : '✅ บันทึกเวลาออกงานเรียบร้อย'), true);
+      } else {
+        setStatus('เกิดข้อผิดพลาด: ' + data.message, false);
+      }
+    } catch (e) {
+      setStatus(typeof e === 'string' ? e : 'เกิดข้อผิดพลาด กรุณาลองใหม่', false);
+    } finally {
+      document.getElementById('btnIn').disabled = false;
+      document.getElementById('btnOut').disabled = false;
+    }
+  }
+
+  async function init() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+      profile = await liff.getProfile();
+
+      document.getElementById('name').textContent = profile.displayName;
+      document.getElementById('userid').textContent = profile.userId;
+      if (profile.pictureUrl) {
+        const avatar = document.getElementById('avatar');
+        avatar.src = profile.pictureUrl;
+        avatar.style.display = 'inline-block';
+      }
+
+      document.getElementById('btnIn').disabled = false;
+      document.getElementById('btnOut').disabled = false;
+
+      document.getElementById('btnIn').onclick = () => clockAction('เข้างาน');
+      document.getElementById('btnOut').onclick = () => clockAction('ออกงาน');
+
+    } catch (err) {
+      setStatus('ไม่สามารถเชื่อมต่อ LINE ได้: ' + err, false);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
